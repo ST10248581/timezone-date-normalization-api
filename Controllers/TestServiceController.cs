@@ -1,38 +1,39 @@
-﻿using DateInputNormalizer.Filters;
+﻿
+using System.Text;
+using DateInputNormalizer.DateNormalization;
 using DateInputNormalizer.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DateInputNormalizer.Controllers
 {
-    
+
     [ApiController]
     public class TestServiceController : ControllerBase
     {
+        private DateLogic _dateLogic;
+
+        public TestServiceController() 
+        {
+            _dateLogic = new DateLogic();
+        }
 
         [HttpPost]
         [Route("api/[controller]/TestDateHandling")]
-        [NormalizeDateInput]
-        public IActionResult TestDateHandling(TestDateModel model, string timeZone)
+        public IActionResult TestDateHandling(TestDateModel incoming)
         {
-            return Ok(new
+            var result = new TestDateModel()
             {
-                ServerReceived = model,
-                ServerNow = DateTime.Now,
-                ServerUtcNow = DateTime.UtcNow
-            });
+                skipsOtherProperty = false,
+                ReceivedDateTimeRaw = incoming.EventTime.ToString("O"),
+                ReceivedDateOnlyRaw = incoming.EventDate.ToString("yyyy-MM-dd"),
+                EventTime = incoming.EventTime,
+                EventDate = incoming.EventDate,
+                ConvertedDateOnly = DateOnly.FromDateTime(_dateLogic.ToUtcDateTimeSafe(incoming.EventDate)),
+                ConvertedSafeDateOnly = _dateLogic.ToLocalDateSafe((_dateLogic.ToUtcDateTimeSafe(incoming.EventDate)))
+            };
+            return Ok(result);
         }
 
-        [HttpPost]
-        [Route("api/[controller]/TestDateHandlingNoFilter")]
-        public IActionResult TestDateHandlingNoFilter(TestDateModel model)
-        {
-            return Ok(new
-            {
-                ServerReceived = model,
-                ServerNow = DateTime.Now,
-                ServerUtcNow = DateTime.UtcNow
-            });
-        }
     }
 }

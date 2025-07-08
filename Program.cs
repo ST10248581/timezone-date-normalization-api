@@ -1,3 +1,5 @@
+using DateInputNormalizer.DateNormalization;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +39,16 @@ builder.Services.AddSwaggerGen(c =>
 });
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddHttpContextAccessor();
+
+var dateLogic = new DateLogic();
+dateLogic.setServerTimeZone();
+
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new ZonedDateConverter());
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -47,6 +59,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.Use(async (context, next) =>
+{
+    var tzHeader = context.Request.Headers["X-Timezone"].FirstOrDefault();
+    var dateLogic = new DateLogic();
+    dateLogic.setClientTimeZone(tzHeader);
+    await next.Invoke();
+});
 
 app.UseAuthorization();
 
